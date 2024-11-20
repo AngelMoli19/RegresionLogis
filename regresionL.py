@@ -1,14 +1,14 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, roc_curve, auc
 import plotly.express as px
 import plotly.graph_objects as go
+from streamlit_option_menu import option_menu
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, roc_curve, auc
+from sklearn.model_selection import cross_val_score
 
 # Configuración de la página
 st.set_page_config(page_title="Regresión Logística", layout="wide")
@@ -178,10 +178,57 @@ with open(css_file, "w") as file:
 # Inyectar el CSS
 local_css(css_file)
 
-# Título principal
-st.title("🔍 Regresión Logística")
+# Manejar el estado inicial del menú
+if "menu_option" not in st.session_state:
+    st.session_state.menu_option = "Inicio"
 
-# Función para inicializar variables en session_state
+# Opciones del menú lateral
+selected = option_menu(
+    menu_title="Reg-Logis",
+    options=["Inicio", "Dashboard", "Modelo", "Predicción"],
+    icons=["house", "bar-chart", "robot", "magic"],
+    menu_icon="cast",
+    default_index=0 if st.session_state.menu_option == "Inicio" else ["Inicio", "Dashboard", "Modelo", "Predicción"].index(st.session_state.menu_option),
+)
+
+st.session_state.menu_option = selected
+
+
+# CSS personalizado para estilo
+st.markdown("""
+<style>
+    .tabs-container {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 20px;
+        gap: 10px;
+    }
+    .tab {
+        padding: 10px 20px;
+        font-family: 'Arial', sans-serif;
+        font-size: 16px;
+        color: white;
+        background-color: #4CAF50;
+        border-radius: 10px;
+        text-align: center;
+        cursor: pointer;
+        transition: background-color 0.3s ease, transform 0.2s ease;
+        box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+    }
+    .tab:hover {
+        background-color: #45a049;
+        transform: scale(1.05);
+    }
+    .tab-active {
+        background-color: #007acc;
+        font-weight: bold;
+        transform: scale(1.1);
+        box-shadow: 3px 3px 7px rgba(0, 0, 0, 0.3);
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Inicializar variables en session_state
 def init_session_state():
     if 'df' not in st.session_state:
         st.session_state.df = None
@@ -206,41 +253,83 @@ def init_session_state():
     if 'scaler' not in st.session_state:
         st.session_state.scaler = None
 
-# Inicializar variables de estado
 init_session_state()
 
-# Sidebar para cargar el archivo y navegar entre pasos
-st.sidebar.title("Navegación")
-
-# Paso de navegación
-st.sidebar.markdown("""
-    <style>
-        .css-1v3fvcr > div:first-child {
-            background-color: #f0f8ff;
-            color: #007acc;
-            border-radius: 10px;
-            padding: 10px;
-        }
-        .css-1v3fvcr > div:first-child:hover {
-            background-color: #dbefff;
-        }
-    </style>
-""", unsafe_allow_html=True)
-
-step = st.sidebar.radio("Selecciona el paso:", [
-    "📂 Paso 1: Cargar Datos",
-    "📊 Paso 2: Seleccionar Variables",
-    "✂️ Paso 3: Dividir Datos",
-    "🤖 Paso 4: Entrenar Modelo",
-    "📈 Paso 5: Evaluar Modelo",
-    "🔮 Paso 6: Predicción con Nuevos Datos"
-])
-
-
-# Paso 1: Cargar y visualizar los datos
-if step == "📂 Paso 1: Cargar Datos":
+# Estructura del menú
+if selected == "Inicio":
     st.markdown("""
     <style>
+        .welcome-container {
+            background-color: #f0f8ff;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .welcome-title {
+            font-family: 'Arial Black', sans-serif;
+            font-size: 30px;
+            color: #007ACC;
+            margin-bottom: 10px;
+        }
+        .welcome-text {
+            font-family: 'Georgia', serif;
+            font-size: 18px;
+            color: #333333;
+            line-height: 1.6;
+        }
+        .step-list {
+            text-align: left;
+            margin-top: 15px;
+            margin-bottom: 15px;
+            font-family: 'Arial', sans-serif;
+            font-size: 16px;
+            color: #555;
+        }
+        .step-list li {
+            margin-bottom: 10px;
+        }
+        .welcome-button {
+            font-family: 'Arial', sans-serif;
+            font-size: 16px;
+            color: white;
+            background-color: #007BFF;
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 15px;
+            transition: background-color 0.3s ease;
+        }
+        .welcome-button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+    <div class="welcome-container">
+        <div class="welcome-title">¡Bienvenido! 🧠</div>
+        <p class="welcome-text">
+            Explora las poderosas capacidades de análisis predictivo con nuestra herramienta de Regresión Logística.
+            Sigue los pasos a continuación para comenzar:
+        </p>
+        <ul class="step-list">
+            <li><strong>Paso 1:</strong> Carga tus datos en formato CSV o XLSX.</li>
+            <li><strong>Paso 2:</strong> Selecciona las variables independientes y dependiente.</li>
+            <li><strong>Paso 3:</strong> Divide los datos en conjuntos de entrenamiento y prueba.</li>
+            <li><strong>Paso 4:</strong> Entrena tu modelo con los parámetros ajustados.</li>
+            <li><strong>Paso 5:</strong> Evalúa el desempeño del modelo con métricas clave.</li>
+            <li><strong>Paso 6:</strong> Realiza predicciones con nuevos datos.</li>
+        </ul>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Botón para ir al Dashboard
+    if st.button("Ir al Dashboard 🚀"):
+        st.session_state.menu_option = "Dashboard"
+        
+if selected == "Dashboard":
+    st.markdown("""
+    <style> 
         .welcome-text {
             text-align: center; /* Centra el texto */
             font-family: 'Georgia', serif; /* Cambia la fuente a una más elegante */
@@ -252,14 +341,14 @@ if step == "📂 Paso 1: Cargar Datos":
         }
     </style>
     <p class="welcome-text">
-        🧠¡Tu viaje hacia el análisis predictivo comienza aquí! 🔍
+        🧠 ¡Tu viaje hacia el análisis predictivo comienza aquí! 🔍
     </p>
-""", unsafe_allow_html=True)
-    st.header("📂 Paso 1: Cargar Datos")
+    """, unsafe_allow_html=True)
 
-    # Sidebar para cargar el archivo
-    st.sidebar.subheader("Carga de Datos")
-    uploaded_file = st.sidebar.file_uploader("Sube un archivo de datos (CSV o XLSX)", type=["csv", "xlsx"])
+    st.header("📂 Cargar Datos")
+
+    # Cargar el archivo
+    uploaded_file = st.file_uploader("Sube un archivo de datos (CSV o XLSX)", type=["csv", "xlsx"])
 
     if uploaded_file:
         # Leer el archivo según su extensión
@@ -268,7 +357,6 @@ if step == "📂 Paso 1: Cargar Datos":
                 st.session_state.df = pd.read_csv(uploaded_file)
             elif uploaded_file.name.endswith('.xlsx'):
                 st.session_state.df = pd.read_excel(uploaded_file)
-
 
             # Mostrar una vista previa de los datos cargados
             st.write("### Vista previa de los datos cargados:")
@@ -280,11 +368,11 @@ if step == "📂 Paso 1: Cargar Datos":
 
             # Matriz de correlación con Plotly
             st.write("### Matriz de Correlación")
-            correlation_matrix = st.session_state.df.corr()  # Calcular la matriz de correlación
+            correlation_matrix = st.session_state.df.corr()
             fig_corr = px.imshow(
                 correlation_matrix,
-                text_auto=".2f",  # Mostrar los valores con 2 decimales
-                color_continuous_scale="RdBu_r",  # Escala de colores
+                text_auto=".2f",
+                color_continuous_scale="RdBu_r",
                 labels=dict(color="Correlación"),
                 title="Matriz de Correlación"
             )
@@ -294,8 +382,8 @@ if step == "📂 Paso 1: Cargar Datos":
                 xaxis_title="Variables",
                 yaxis_title="Variables",
                 coloraxis_showscale=True,
-                width=800,  # Ajustar el ancho del gráfico
-                height=600  # Ajustar la altura del gráfico
+                width=800,
+                height=600
             )
             st.plotly_chart(fig_corr, use_container_width=False)
         except Exception as e:
@@ -303,26 +391,24 @@ if step == "📂 Paso 1: Cargar Datos":
     else:
         st.info("Por favor, carga un archivo CSV o XLSX para comenzar.")
 
-# Paso 2: Seleccionar variables
-elif step == "📊 Paso 2: Seleccionar Variables":
-    st.header("📊 Paso 2: Seleccionar Variables")
+    # Paso 2: Seleccionar variables
+    st.header("📊 Seleccionar Variables")
 
     if "df" not in st.session_state or st.session_state.df is None:
         st.warning("⚠️ Por favor, ve al Paso 1 y carga los datos primero.")
     else:
         # Seleccionar variables independientes y dependiente
-        st.sidebar.subheader("Seleccionar Variables")
         all_columns = st.session_state.df.columns.tolist()
 
         # Seleccionar la variable dependiente
-        st.session_state.target_variable = st.sidebar.selectbox(
+        st.session_state.target_variable = st.selectbox(
             "Selecciona la variable dependiente (Y):", 
             all_columns, 
             help="Elige la columna que quieres predecir"
         )
 
         # Seleccionar las variables independientes
-        st.session_state.feature_variables = st.sidebar.multiselect(
+        st.session_state.feature_variables = st.multiselect(
             "Selecciona las variables independientes (X):", 
             [col for col in all_columns if col != st.session_state.target_variable],
             help="Elige una o más columnas para entrenar el modelo"
@@ -372,13 +458,17 @@ elif step == "📊 Paso 2: Seleccionar Variables":
                 margin=dict(t=50, b=30)
             )
             st.plotly_chart(fig_target, use_container_width=True)
+
+            # Botón para ir al modelo
+            if st.button("Ir al Modelo 🚀"):
+                st.session_state.menu_option = "Modelo"
         else:
             st.warning("⚠️ Por favor, selecciona la variable dependiente y al menos una variable independiente.")
 
 
-# Paso 3: Dividir Datos
-elif step == "✂️ Paso 3: Dividir Datos":
-    st.header("✂️ Paso 3: Dividir Datos")
+if selected == "Modelo":
+    # Paso 3: Dividir Datos
+    st.header("✂️ Dividir Datos")
 
     if "X" not in st.session_state or st.session_state.X is None or "y" not in st.session_state or st.session_state.y is None:
         st.warning("⚠️ Por favor, completa los pasos anteriores antes de continuar.")
@@ -461,15 +551,12 @@ elif step == "✂️ Paso 3: Dividir Datos":
                 )
                 st.plotly_chart(fig_scaled, use_container_width=True)
 
-
-# Paso 4: Entrenar Modelo
-elif step == "🤖 Paso 4: Entrenar Modelo":
-    st.header("🤖 Paso 4: Entrenar Modelo")
+    # Paso 4: Entrenar Modelo
+    st.header("🤖 Entrenar Modelo")
 
     if "X_train_scaled" not in st.session_state or st.session_state.X_train_scaled is None:
         st.warning("⚠️ Por favor, completa los pasos anteriores antes de continuar.")
     else:
-        from sklearn.linear_model import LogisticRegression
 
         # Parámetros del modelo
         st.sidebar.subheader("🔧 Parámetros del Modelo")
@@ -497,7 +584,6 @@ elif step == "🤖 Paso 4: Entrenar Modelo":
             'Coeficiente': st.session_state.model.coef_[0]
         }).sort_values(by='Coeficiente', ascending=False)
 
-        # Estilo de la tabla
         st.write("#### Tabla de Coeficientes:")
         st.dataframe(coef_df.style.format({"Coeficiente": "{:.4f}"}).background_gradient(cmap="coolwarm"))
 
@@ -509,28 +595,17 @@ elif step == "🤖 Paso 4: Entrenar Modelo":
             y='Coeficiente', 
             title='Coeficientes del Modelo', 
             color='Coeficiente',
-            color_continuous_scale="RdBu_r",
-            labels={'Coeficiente': 'Valor del Coeficiente', 'Variable': 'Variables'}
+            color_continuous_scale="RdBu_r"
         )
-        fig_coef.update_layout(
-            title_font_size=16,
-            title_x=0.5,
-            margin=dict(t=50, b=30),
-            xaxis_title="Variables",
-            yaxis_title="Valor del Coeficiente",
-            coloraxis_showscale=True
-        )
+        fig_coef.update_layout(title_font_size=16, title_x=0.5)
         st.plotly_chart(fig_coef, use_container_width=True)
 
-
-# Paso 5: Evaluar Modelo
-elif step == "📈 Paso 5: Evaluar Modelo":
-    st.header("📈 Paso 5: Evaluar Modelo")
+    # Paso 5: Evaluar Modelo
+    st.header("📈 Evaluar Modelo")
 
     if "model" not in st.session_state or st.session_state.model is None:
         st.warning("⚠️ Por favor, entrena el modelo en el Paso 4 antes de continuar.")
     else:
-        # Evaluación del modelo
         from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, roc_curve, auc
         from sklearn.model_selection import cross_val_score
 
@@ -563,14 +638,10 @@ elif step == "📈 Paso 5: Evaluar Modelo":
             labels=dict(x="Predicción", y="Verdadero", color="Frecuencia"),
             title="Matriz de Confusión"
         )
-        fig_cm.update_layout(
-            xaxis_title="Predicción",
-            yaxis_title="Verdadero",
-            coloraxis_showscale=True
-        )
+        fig_cm.update_layout(xaxis_title="Predicción", yaxis_title="Verdadero")
         st.plotly_chart(fig_cm, use_container_width=True)
 
-       # Curva ROC y AUC - Alternativa
+        # Curva ROC y AUC - Alternativa
         st.markdown("### 🎯 Curva ROC (Alternativa)")
         fpr, tpr, _ = roc_curve(st.session_state.y_test, y_pred_proba)
         roc_auc = auc(fpr, tpr)
@@ -692,13 +763,15 @@ elif step == "📈 Paso 5: Evaluar Modelo":
         st.write(f"**Puntuaciones de validación cruzada:** {cv_scores}")
         st.success(f"**Precisión media:** {cv_scores.mean():.2f}")
 
+        if st.button("Ir a la Predicción 🔮"):
+            st.session_state.menu_option = "Predicción"
 
-    # Paso 6: Predicción con Nuevos Datos
-elif step == "🔮 Paso 6: Predicción con Nuevos Datos":
-    st.header("🔮 Paso 6: Predicción con Nuevos Datos")
+
+if selected == "Predicción":
+    st.title("🔮 Predicción con Nuevos Datos")
 
     if "model" not in st.session_state or st.session_state.model is None:
-        st.warning("⚠️ Por favor, entrena el modelo en el Paso 4 antes de continuar.")
+        st.warning("⚠️ Por favor, entrena el modelo en la sección 'Modelo' antes de continuar.")
     else:
         new_data = {}
         st.markdown("### 🖊️ Ingrese los valores para las variables independientes")
@@ -752,4 +825,3 @@ elif step == "🔮 Paso 6: Predicción con Nuevos Datos":
                 plot_bgcolor="rgba(240,240,240,0.9)"
             )
             st.plotly_chart(fig_sigmoid, use_container_width=True)
-
